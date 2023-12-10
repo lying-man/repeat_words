@@ -1,0 +1,215 @@
+
+main_route https://api-repeat-words.vercel.app/api/words
+
+get words
+--base route
+(mode=single | many)
+{id, word, description, sentences(null) - [{ id, word_id, sentence }]  }
+
+add word
+--https://api-repeat-words.vercel.app/api/words/add
+send { word, description(null), sentences(null) - { word_id, sentence } } limit 3 signs
+back { status: true }
+if (searchedWord.rows.length) return res.status(500).json({error: "already have"});
+
+edit description
+--https://api-repeat-words.vercel.app/api/words/description
+send { text(empty), id }
+back { status: true }
+
+sentence add
+--https://api-repeat-words.vercel.app/api/words/sentences/add
+send { text, id } limit 3 signs
+back { status: true, id } 
+
+sentence delete
+--https://api-repeat-words.vercel.app/api/words/sentences/delete
+send { id }
+back { status: true }
+
+sentence edit
+--https://api-repeat-words.vercel.app/api/words/sentences/edit
+send { text, id } limit 3 signs
+back { status: true }
+
+
+
+
+
+
+
+
+
+const express = require("express");
+const db = require("./db.js");
+const cors = require("cors");
+
+const app = express();
+
+const PORT = process.env.PORT || 4000;
+
+app.use(cors());
+app.use(express.json());
+
+const singleReturnSql = "select * from words offset floor(random() * (select count(*) from words)) limit 1;";
+const manyReturnSql = "select * from words order by random() limit 3;";
+
+async function getRandomWords(req, res) {
+
+	const { mode } = req.query;
+	
+	if (!mode) return res.status(500).json({error: "Error request"});
+
+	try {
+
+		let words = null;
+
+		if (mode === "single") words = await db.query(singleReturnSql);
+		if (mode === "many") words = await db.query(manyReturnSql);
+
+		let data = [];
+
+		for (let row of words.rows) {
+
+			let sentences = await db.query("select * from sentences where word_id = $1", [ row.id ]);
+			
+			if (!sentences.rows.length) {
+				data.push(row);
+				continue;
+			}
+
+			sentences = sentences.rows.map(el => {
+				let { word_id, ...sentenceItem } = el;
+				return sentenceItem;
+			});
+
+			data.push({ ...row, sentences: sentences });
+
+		}
+
+		res.json(data);
+
+	} catch(e) {
+		console.log(e);
+		res.status(500).json({error: "Error request"});
+		return;
+	}
+
+}
+
+async function addWord(req, res) {
+
+	const data = req.body;
+
+	if (!(data.word.trim().length >= 3)) return res.status(500).json({error: "Error request"});
+
+	let description = data.description || null;
+
+	try {
+
+		const newWord = await db.query("insert into words (word, description) values ($1, $2) returning *", [ data.word, description ]);
+		const ID = newWord.rows[0].id;
+
+		if (data.sentences) {
+
+			for (let sentence of data.sentences) {
+				await db.query("insert into sentences (sentence, word_id) values ($1, $2)", [ sentence, ID ]);
+			}
+
+		}
+
+		res.json({ status: true });
+
+	} catch (e) {
+		console.log(e);
+		res.status(500).json({error: "Error request"});
+		return;
+	}
+
+}
+
+async function editDescription(req, res) {
+
+	let { text, id } = req.body;
+
+	text = text || null;
+
+	try {
+
+		await db.query("update words set description = $1 where id = $2", [ text, id ]);
+		res.json({ status: true });
+
+	} catch(e) {
+		console.log(e);
+		res.status(500).json({ error: "Error request" });
+		return;
+	}
+
+}
+
+async function addSentenceWord(req, res) {
+
+	const { text, id } = req.body;
+
+	if (!(text.trim().length >= 3)) return res.status(500).json({error: "Error request"});
+
+	try {
+
+		await db.query("insert into sentences (sentence, word_id) values ($1, $2)", [ text, id ]);
+		res.json({ status: true });
+
+	} catch(e) {
+		console.log(e);
+		res.status(500).json({ error: "Error request" });
+		return;
+	}
+
+}
+
+async function deleteSentenceWord(req, res) {
+
+	const { id } = req.body;
+
+	try {
+
+		await db.query("delete from sentences where id = $1", [ id ]);
+		res.json({ status: true });
+
+	} catch(e) {
+		console.log(e);
+		res.status(500).json({ error: "Error request" });
+		return;
+	}
+
+}
+
+async function editSentenceWord(req, res) {
+
+	const { text, id } = req.body;
+
+	if (!(text.trim().length >= 3)) return res.status(500).json({error: "Error request"});
+
+	try {
+
+		await db.query("update sentences set sentence = $1 where id = $2", [ text, id ]);
+		res.json({ status: true });
+
+	} catch(e) {
+		console.log(e);
+		res.status(500).json({ error: "Error request" });
+		return;
+	}
+
+}
+
+//routes
+app.get("/api/words", getRandomWords);
+app.post("/api/words/add", addWord);
+app.post("/api/words/description", editDescription);
+app.post("/api/words/sentences/add", addSentenceWord);
+app.post("/api/words/sentences/delete", deleteSentenceWord);
+app.post("/api/words/sentences/edit", editSentenceWord);
+
+app.listen(PORT, () => console.log("Server has been started"));
+
+module.exports = app;
