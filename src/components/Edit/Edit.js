@@ -64,8 +64,6 @@ const Edit = () => {
         }
     }
 
-    //предложения не грузятся на сервер
-
     const onCloseSnackbar = () => setSnack({ visible: false, mode: snack.mode, content: snack.content });
 
     return (

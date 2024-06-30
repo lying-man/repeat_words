@@ -2,11 +2,11 @@ import React from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import ModeButton from '../ModeButton/ModeButton';
 import { Link } from 'react-router-dom';
+import Logo from "../../assets/logo.svg";
 
 export default function ButtonAppBar() {
 
@@ -17,17 +17,19 @@ export default function ButtonAppBar() {
     <Box sx={{ flexGrow: 1, p: "20px 20px 0px 20px" }}>
       <AppBar 
         position="static" 
-        sx={{ boxShadow: "none", borderRadius: "10px" }}
+        sx={{ boxShadow: "none", borderRadius: "10px", bgcolor: "transparent" }}
       >
-        <Toolbar sx={{ flexDirection: matchesOne ? "column" : "row", p: matchesOne ? "20px 0px" : "0px" }}>
+        <Toolbar 
+          sx={{ justifyContent: "space-between", flexDirection: matchesOne ? "column" : "row", p: matchesOne ? "20px 0px" : "0px" }}
+        >
 
-          <Typography 
-            variant={ matchesTwo ? "body2" : "body1" } 
-            component="div" 
-            sx={{ flexGrow: 1, textTransform: "uppercase", mb: matchesOne ? "12px" : "0px" }}
-          >
-            Обновление словарного запаса
-          </Typography>
+          <Box>
+            <img 
+              style={{  width: "300px", height: "60px" }}
+              src={Logo} 
+              alt="Логотип приложения для улучшения словарного запаса" 
+            />
+          </Box>
 
           <Box sx={{ display: "flex", gap: "12px", alignItems: "center", flexDirection: matchesTwo ? "column" : "row" }}>
             <ModeButton />
@@ -37,6 +39,7 @@ export default function ButtonAppBar() {
           </Box>
           
         </Toolbar>
+
       </AppBar>
     </Box>
   );
