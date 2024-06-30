@@ -8,3 +8,7 @@
   min-height: 100vh;
   background: #edecec;
 }
+
+a {
+  text-decoration: none;
+}
